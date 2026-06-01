@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="차량검색">
+<title>차량 번호 검색</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif;
+    background: #f2f2f7; min-height: 100vh; color: #1c1c1e;
+  }
+
+  /* ---- パスワード画面 ---- */
+  #lockScreen {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 100vh; padding: 2rem;
+  }
+  .lock-icon { font-size: 48px; margin-bottom: 16px; }
+  .lock-title { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+  .lock-sub { font-size: 13px; color: #8e8e93; margin-bottom: 28px; text-align: center; line-height: 1.6; }
+  .pw-input {
+    width: 100%; max-width: 280px; height: 52px;
+    border: 1.5px solid #e0e0e5; border-radius: 12px;
+    font-size: 18px; text-align: center; letter-spacing: 4px;
+    background: #fff; color: #1c1c1e; outline: none; margin-bottom: 12px;
+  }
+  .pw-input:focus { border-color: #007aff; }
+  .pw-btn {
+    width: 100%; max-width: 280px; height: 52px; border: none;
+    border-radius: 12px; background: #007aff; color: #fff;
+    font-size: 16px; font-weight: 600; cursor: pointer;
+  }
+  .pw-btn:active { background: #0062cc; }
+  .pw-error { margin-top: 12px; font-size: 13px; color: #ff3b30; display: none; }
+
+  /* ---- ローディング ---- */
+  #loadingScreen {
+    display: none; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 100vh; gap: 16px;
+  }
+  .spinner {
+    width: 36px; height: 36px; border: 3px solid #e0e0e5;
+    border-top-color: #007aff; border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 14px; color: #8e8e93; }
+
+  /* ---- エラー画面 ---- */
+  #errorScreen {
+    display: none; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 100vh; padding: 2rem; text-align: center;
+  }
+  .error-icon { font-size: 40px; margin-bottom: 12px; }
+  .error-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+  .error-desc { font-size: 13px; color: #8e8e93; line-height: 1.6; margin-bottom: 20px; }
+  .retry-btn {
+    padding: 12px 28px; border: none; border-radius: 12px;
+    background: #007aff; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+
+  /* ---- メイン画面 ---- */
+  #mainScreen { display: none; }
+  .app { max-width: 430px; margin: 0 auto; padding: 0 0 2rem; }
+  .header {
+    background: #fff; padding: 1rem 1.25rem 1.25rem;
+    border-bottom: 0.5px solid #e0e0e5; text-align: center;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .header h1 { font-size: 18px; font-weight: 600; }
+  .header p { font-size: 12px; color: #8e8e93; margin-top: 2px; }
+  .header-right {
+    position: absolute; top: 12px; right: 16px;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+  }
+  .count-badge {
+    background: #e5e5ea; color: #8e8e93;
+    font-size: 11px; font-weight: 600;
+    padding: 3px 10px; border-radius: 20px;
+  }
+  .data-badge {
+    background: #e8f4ff; color: #0a5ecc;
+    font-size: 10px; font-weight: 600;
+    padding: 2px 8px; border-radius: 20px;
+  }
+  .search-section {
+    background: #fff; margin: 12px 16px 0;
+    border-radius: 16px; padding: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  }
+  .digit-row { display: flex; gap: 10px; justify-content: center; margin-bottom: 1.25rem; }
+  .digit-box {
+    width: 66px; height: 70px; border-radius: 12px;
+    background: #f2f2f7; border: 1.5px solid #e0e0e5;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px; font-weight: 600; color: #1c1c1e;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .digit-box.active { border-color: #007aff; background: #e8f0fe; }
+  .digit-box.empty { color: #c7c7cc; font-size: 20px; }
+  .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .num-btn {
+    height: 58px; border-radius: 12px; border: none;
+    background: #f2f2f7; font-size: 22px; font-weight: 500; color: #1c1c1e;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    -webkit-user-select: none; user-select: none; transition: background 0.1s;
+  }
+  .num-btn:active { background: #d1d1d6; transform: scale(0.96); }
+  .clr-btn { font-size: 14px; font-weight: 600; color: #8e8e93; }
+  .result-section { margin: 12px 16px 0; }
+  .result-card {
+    background: #fff; border-radius: 16px; padding: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.07); animation: slideUp 0.2s ease;
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .result-top { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+  .avatar {
+    width: 50px; height: 50px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 600; flex-shrink: 0;
+  }
+  .avatar-kr { background: #e1f0ff; color: #0a5ecc; }
+  .avatar-jp { background: #e6f9ee; color: #1a7a45; }
+  .result-name { font-size: 19px; font-weight: 600; }
+  .result-baptism { font-size: 13px; color: #8e8e93; margin-top: 2px; }
+  .badge {
+    margin-left: auto; padding: 5px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: 600; text-align: center; line-height: 1.4; flex-shrink: 0;
+  }
+  .badge-kr { background: #e1f0ff; color: #0a5ecc; }
+  .badge-jp { background: #e6f9ee; color: #1a7a45; }
+  .divider { border: none; border-top: 0.5px solid #e5e5ea; margin: 12px 0; }
+  .plate-num {
+    text-align: center; font-size: 26px; font-weight: 700;
+    letter-spacing: 3px; background: #f2f2f7;
+    border-radius: 10px; padding: 10px; margin-bottom: 12px;
+  }
+  .detail-row {
+    display: flex; justify-content: space-between;
+    align-items: center; padding: 6px 0; font-size: 14px;
+  }
+  .detail-label { color: #8e8e93; }
+  .detail-val { font-weight: 500; }
+  .not-found {
+    background: #fff; border-radius: 16px; padding: 2rem 1.25rem;
+    text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+    animation: slideUp 0.2s ease;
+  }
+  .not-found .icon { font-size: 40px; margin-bottom: 10px; }
+  .not-found h2 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .not-found p { font-size: 13px; color: #8e8e93; }
+  .reset-btn {
+    width: 100%; margin-top: 12px; padding: 15px; border-radius: 14px;
+    border: none; background: #007aff; color: #fff;
+    font-size: 16px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .reset-btn:active { background: #0062cc; transform: scale(0.98); }
+  .refresh-btn {
+    width: 100%; margin: 12px 16px 0; width: calc(100% - 32px);
+    padding: 12px; border-radius: 12px; border: 1px solid #e0e0e5;
+    background: #fff; color: #8e8e93; font-size: 13px; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .refresh-btn:active { background: #f2f2f7; }
+</style>
+</head>
+<body>
+
+<!-- パスワード画面 -->
+<div id="lockScreen">
+  <div class="lock-icon">🔒</div>
+  <div class="lock-title">차량 번호 검색</div>
+  <div class="lock-sub">パスワードを入力してください</div>
+  <input class="pw-input" type="password" id="pwInput" placeholder="••••••"
+    onkeydown="if(event.key==='Enter')checkPw()">
+  <button class="pw-btn" onclick="checkPw()">ログイン</button>
+  <div class="pw-error" id="pwError">パスワードが違います</div>
+</div>
+
+<!-- ローディング -->
+<div id="loadingScreen">
+  <div class="spinner"></div>
+  <div class="loading-text">데이터를 불러오는 중… / データ読込中…</div>
+</div>
+
+<!-- エラー -->
+<div id="errorScreen">
+  <div class="error-icon">⚠️</div>
+  <div class="error-title">データの読み込みに失敗しました</div>
+  <div class="error-desc">インターネット接続を確認してから<br>再試行してください。<br><br>스프레드시트 공유 설정을<br>확인해 주세요.</div>
+  <button class="retry-btn" onclick="loadData()">再試行 / 다시 시도</button>
+</div>
+
+<!-- メイン画面 -->
+<div id="mainScreen">
+  <div class="app">
+    <div class="header" style="position:relative;">
+      <h1>🚗 차량 번호 검색</h1>
+      <p>ナンバー末尾4桁を入力</p>
+      <div class="header-right">
+        <div class="count-badge" id="countBadge">0건</div>
+        <div class="data-badge" id="dataBadge">0대 등록</div>
+      </div>
+    </div>
+    <div class="search-section">
+      <div class="digit-row">
+        <div class="digit-box empty" id="d0">—</div>
+        <div class="digit-box empty" id="d1">—</div>
+        <div class="digit-box empty" id="d2">—</div>
+        <div class="digit-box empty" id="d3">—</div>
+      </div>
+      <div class="numpad">
+        <button class="num-btn" onclick="press('1')">1</button>
+        <button class="num-btn" onclick="press('2')">2</button>
+        <button class="num-btn" onclick="press('3')">3</button>
+        <button class="num-btn" onclick="press('4')">4</button>
+        <button class="num-btn" onclick="press('5')">5</button>
+        <button class="num-btn" onclick="press('6')">6</button>
+        <button class="num-btn" onclick="press('7')">7</button>
+        <button class="num-btn" onclick="press('8')">8</button>
+        <button class="num-btn" onclick="press('9')">9</button>
+        <button class="num-btn clr-btn" onclick="clearAll()">CLR</button>
+        <button class="num-btn" onclick="press('0')">0</button>
+        <button class="num-btn" style="font-size:16px;" onclick="del()">⌫</button>
+      </div>
+    </div>
+    <div class="result-section" id="resultSection"></div>
+    <button class="refresh-btn" onclick="loadData()">
+      🔄 데이터 새로고침 / データ更新
+    </button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// パスワード設定
+// ============================================================
+const PASSWORD = "tokyo2026";
+
+// ============================================================
+// スプレッドシートID（URLの /d/ と /edit の間の文字列）
+// ============================================================
+const SHEET_ID = "1DuxRqP_KJEE6TiGWuZxsD7Sb4-rjGKv1gyR80nyo8So";
+
+// ============================================================
+// 韓国信者の名前リスト（追加・変更してください）
+// ============================================================
+const KOREAN_NAMES = [
+  "류봉환","조한빈","이주원","박미연"
+  // 追加例: ,"홍길동","김철수"
+];
+// ============================================================
+
+let vehicles = [];
+let digits = [];
+let searchCount = 0;
+
+function checkPw() {
+  const val = document.getElementById('pwInput').value;
+  if (val === PASSWORD) {
+    document.getElementById('lockScreen').style.display = 'none';
+    loadData();
+  } else {
+    document.getElementById('pwError').style.display = 'block';
+    document.getElementById('pwInput').value = '';
+    document.getElementById('pwInput').focus();
+  }
+}
+
+function show(id) {
+  ['loadingScreen','errorScreen','mainScreen'].forEach(s => {
+    document.getElementById(s).style.display = s === id ? 'flex' : 'none';
+  });
+  if (id === 'mainScreen') document.getElementById('mainScreen').style.display = 'block';
+}
+
+async function loadData() {
+  show('loadingScreen');
+  try {
+    const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQRUwqZMVXZ0qtjDPyvO6AqtBO4fXzuU6FXe8x6aVpznWGLWJ6Lhe0Tjt5FyvlQsvQkaeuq8vnoA4wf/pub?output=csv";
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('fetch failed');
+    const text = await res.text();
+    vehicles = parseCSV(text);
+    document.getElementById('dataBadge').textContent = vehicles.length + '대 등록';
+    show('mainScreen');
+  } catch(e) {
+    show('errorScreen');
+  }
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  // 1行目はヘッダーなのでスキップ
+  const result = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = splitCSVLine(lines[i]);
+    // 列順: 0=タイムスタンプ, 1=성명, 2=세례명, 3=연락처, 4=차량번호, 5=차명, 6=색상, 7=동의
+    if (!cols[1] || !cols[4]) continue;
+    const name = cols[1].replace(/^"|"$/g,'').trim();
+    const baptism = cols[2].replace(/^"|"$/g,'').trim();
+    const plate = cols[4].replace(/^"|"$/g,'').trim();
+    const type = cols[5].replace(/^"|"$/g,'').trim();
+    const color = cols[6].replace(/^"|"$/g,'').trim();
+    result.push({
+      name, baptism, plate, type, color,
+      isKorean: KOREAN_NAMES.includes(name)
+    });
+  }
+  return result;
+}
+
+function splitCSVLine(line) {
+  const result = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; cur += c; }
+    else if (c === ',' && !inQ) { result.push(cur); cur = ''; }
+    else { cur += c; }
+  }
+  result.push(cur);
+  return result;
+}
+
+function last4(plate) {
+  return plate.replace(/[^0-9]/g, '').slice(-4).padStart(4, '0');
+}
+
+function updateDigits() {
+  for (let i = 0; i < 4; i++) {
+    const el = document.getElementById('d' + i);
+    if (i < digits.length) {
+      el.textContent = digits[i];
+      el.className = 'digit-box active';
+    } else {
+      el.textContent = '—';
+      el.className = 'digit-box empty';
+    }
+  }
+}
+
+function press(n) {
+  if (digits.length >= 4) return;
+  digits.push(n);
+  updateDigits();
+  if (digits.length === 4) search();
+}
+
+function del() {
+  if (!digits.length) return;
+  digits.pop();
+  updateDigits();
+  document.getElementById('resultSection').innerHTML = '';
+}
+
+function clearAll() {
+  digits = [];
+  updateDigits();
+  document.getElementById('resultSection').innerHTML = '';
+}
+
+function search() {
+  const q = digits.join('');
+  const found = vehicles.find(v => last4(v.plate) === q);
+  searchCount++;
+  document.getElementById('countBadge').textContent = searchCount + '건';
+  const sec = document.getElementById('resultSection');
+  if (found) {
+    const kr = found.isKorean;
+    const avClass = kr ? 'avatar-kr' : 'avatar-jp';
+    const bdClass = kr ? 'badge-kr' : 'badge-jp';
+    const label = kr ? '한국 신자<br>KR' : '일본 신자<br>JP';
+    const initials = found.name.slice(0, 2);
+    sec.innerHTML = `
+      <div class="result-card">
+        <div class="result-top">
+          <div class="avatar ${avClass}">${initials}</div>
+          <div>
+            <div class="result-name">${found.name}</div>
+            <div class="result-baptism">${found.baptism}</div>
+          </div>
+          <div class="badge ${bdClass}">${label}</div>
+        </div>
+        <hr class="divider">
+        <div class="plate-num">${found.plate}</div>
+        <div class="detail-row"><span class="detail-label">차종</span><span class="detail-val">${found.type}</span></div>
+        <div class="detail-row"><span class="detail-label">색상</span><span class="detail-val">${found.color}</span></div>
+      </div>
+      <button class="reset-btn" onclick="clearAll()">↩ 다음 차량 검색 / 次の車を検索</button>`;
+  } else {
+    sec.innerHTML = `
+      <div class="not-found">
+        <div class="icon">🔍</div>
+        <h2>${q} — 등록 차량 없음</h2>
+        <p>登録されていません</p>
+      </div>
+      <button class="reset-btn" onclick="clearAll()">↩ 다시 검색 / 再検索</button>`;
+  }
+}
+</script>
+</body>
+</html>
