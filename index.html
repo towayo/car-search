@@ -249,14 +249,7 @@ const PASSWORD = "tokyo2026";
 // ============================================================
 const SHEET_ID = "1DuxRqP_KJEE6TiGWuZxsD7Sb4-rjGKv1gyR80nyo8So";
 
-// ============================================================
-// 韓国信者の名前リスト（追加・変更してください）
-// ============================================================
-const KOREAN_NAMES = [
-  "류봉환","조한빈","이주원","박미연"
-  // 追加例: ,"홍길동","김철수"
-];
-// ============================================================
+// 全員韓国信者
 
 let vehicles = [];
 let digits = [];
@@ -306,12 +299,13 @@ function parseCSV(text) {
     if (!cols[1] || !cols[4]) continue;
     const name = cols[1].replace(/^"|"$/g,'').trim();
     const baptism = cols[2].replace(/^"|"$/g,'').trim();
+    const phone = cols[3].replace(/^"|"$/g,'').trim();
     const plate = cols[4].replace(/^"|"$/g,'').trim();
     const type = cols[5].replace(/^"|"$/g,'').trim();
     const color = cols[6].replace(/^"|"$/g,'').trim();
     result.push({
-      name, baptism, plate, type, color,
-      isKorean: KOREAN_NAMES.includes(name)
+      name, baptism, phone, plate, type, color,
+      isKorean: true
     });
   }
   return result;
@@ -393,6 +387,7 @@ function search() {
         <div class="plate-num">${found.plate}</div>
         <div class="detail-row"><span class="detail-label">차종</span><span class="detail-val">${found.type}</span></div>
         <div class="detail-row"><span class="detail-label">색상</span><span class="detail-val">${found.color}</span></div>
+        <div class="detail-row"><span class="detail-label">연락처</span><span class="detail-val">${found.phone}</span></div>
       </div>
       <button class="reset-btn" onclick="clearAll()">↩ 다음 차량 검색 / 次の車を検索</button>`;
   } else {
