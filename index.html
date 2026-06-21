@@ -363,33 +363,33 @@ function clearAll() {
 
 function search() {
   const q = digits.join('');
-  const found = vehicles.find(v => last4(v.plate) === q);
+  const foundList = vehicles.filter(v => last4(v.plate) === q);
   searchCount++;
   document.getElementById('countBadge').textContent = searchCount + '건';
   const sec = document.getElementById('resultSection');
-  if (found) {
-    const kr = found.isKorean;
-    const avClass = kr ? 'avatar-kr' : 'avatar-jp';
-    const bdClass = kr ? 'badge-kr' : 'badge-jp';
-    const label = kr ? '한국 신자<br>KR' : '일본 신자<br>JP';
-    const initials = found.name.slice(0, 2);
-    sec.innerHTML = `
-      <div class="result-card">
+  if (foundList.length > 0) {
+    const cards = foundList.map((found, idx) => {
+      const initials = found.name.slice(0, 2);
+      const multiLabel = foundList.length > 1 ? `<div style="font-size:11px;color:#8e8e93;margin-bottom:8px;">${idx+1} / ${foundList.length}명 등록</div>` : '';
+      return `
+      <div class="result-card" style="margin-bottom:10px;">
+        ${multiLabel}
         <div class="result-top">
-          <div class="avatar ${avClass}">${initials}</div>
+          <div class="avatar avatar-kr">${initials}</div>
           <div>
             <div class="result-name">${found.name}</div>
             <div class="result-baptism">${found.baptism}</div>
           </div>
-          <div class="badge ${bdClass}">${label}</div>
+          <div class="badge badge-kr">한국 신자<br>KR</div>
         </div>
         <hr class="divider">
         <div class="plate-num">${found.plate}</div>
         <div class="detail-row"><span class="detail-label">차종</span><span class="detail-val">${found.type}</span></div>
         <div class="detail-row"><span class="detail-label">색상</span><span class="detail-val">${found.color}</span></div>
         <div class="detail-row"><span class="detail-label">연락처</span><span class="detail-val">${found.phone}</span></div>
-      </div>
-      <button class="reset-btn" onclick="clearAll()">↩ 다음 차량 검색 / 次の車を検索</button>`;
+      </div>`;
+    }).join('');
+    sec.innerHTML = cards + `<button class="reset-btn" onclick="clearAll()">↩ 다음 차량 검색 / 次の車を検索</button>`;
   } else {
     sec.innerHTML = `
       <div class="not-found">
