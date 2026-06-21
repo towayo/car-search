@@ -325,7 +325,9 @@ function splitCSVLine(line) {
 }
 
 function last4(plate) {
-  return plate.replace(/[^0-9]/g, '').slice(-4).padStart(4, '0');
+  const nums = plate.replace(/[^0-9]/g, '');
+  if (nums.length <= 4) return nums.padStart(4, '0');
+  return nums.slice(-4);
 }
 
 function updateDigits() {
@@ -363,7 +365,10 @@ function clearAll() {
 
 function search() {
   const q = digits.join('');
-  const foundList = vehicles.filter(v => last4(v.plate) === q);
+  const foundList = vehicles.filter(v => {
+    const extracted = last4(v.plate);
+    return extracted === q;
+  });
   searchCount++;
   document.getElementById('countBadge').textContent = searchCount + '건';
   const sec = document.getElementById('resultSection');
